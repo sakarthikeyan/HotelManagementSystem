@@ -1,0 +1,364 @@
+﻿@{
+    ViewData["Title"] = "Manage Rates";
+    ViewData["Message"] = "View, Create, Edit, Disable, Delete Rates";
+}
+
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <environment include="Development,Production">
+        <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+        <link href="~/css/site.css" rel="stylesheet" />
+        <link href="~/css/toastr.css" rel="stylesheet" />
+        <link href="~/css/pace-centersimple.css" rel="stylesheet" />
+    </environment>
+</head>
+<body>
+    <h2>@ViewData["Title"]</h2>
+    <h5>@ViewData["Message"]</h5>
+    <h6><label id="pageError" class="error-message"></label></h6>
+
+    <h3>Create a new Rate</h3>
+    <h6>
+        <li>Please select a <b>Category</b> from the first dropdown list.</li>
+        <li>Please select a <b>Class</b> from the second dropdown list.</li>
+        @*<li><b>Rate</b> should be a valid, non-empty string.</li>*@
+        <li><b>Base Price</b> should be a valid amount, rounded to nearest Rupee.</li>
+    </h6>
+    <form action="javascript:void(0);" method="POST" onsubmit="return addItem();">
+        <select id="add-category" onchange="manageFilter();">
+            <option value="" selected></option>
+        </select>
+        <select id="add-class" onchange="manageFilter();">
+            <option value="" selected></option>
+        </select>
+        @*<input type="text" id="add-name" placeholder="Rate" />*@
+        <input type="text" id="add-price" placeholder="Base Price" />
+        <input type="submit" class="submit-button" value="Create" />
+    </form>
+
+    <div id="spoiler">
+        <h3>Edit Rate</h3>
+        <form class="my-form">
+            <input type="hidden" id="edit-id" />
+            <select id="edit-category">
+                <option value="" selected></option>
+            </select>
+            <select id="edit-class">
+                <option value="" selected></option>
+            </select>
+            @*<input type="text" id="edit-name" />*@
+            <input type="text" id="edit-price" />
+            <input type="hidden" id="edit-disabled" />
+            <input type="submit" class="submit-button" value="Update" />
+            <a onclick="closeInput()" aria-label="Close">&#10006;</a>
+        </form>
+    </div>
+
+    <p></p>
+    <h3>
+        <p id="counter"></p>
+    </h3>
+
+    <table border="1" cellpadding="10" cellspacing="10">
+        <tr>
+            @*
+        <th>Id</th>*@
+            <th>Category</th>
+            @*<th>Category Id</th>*@
+            <th>Class</th>
+            @*<th>Class Id</th>*@
+            @*<th>Rate</th>*@
+            <th>Base Price</th>
+            <th>Disabled</th>
+            <th>Timestamp</th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tbody id="collection"></tbody>
+        <tr class="table-footer">
+            <td colspan="7">
+                <input id="navF" type="submit" class="submit-button-nav" value="<< First" onclick="applyPaging('first');" />
+                <input id="navP" type="submit" class="submit-button-nav" value="< Previous" onclick="applyPaging('prev');" />
+                <input id="navN" type="submit" class="submit-button-nav" value="Next >" onclick="applyPaging('next');" />
+                <input id="navL" type="submit" class="submit-button-nav" value="Last >>" onclick="applyPaging('last');" /> Page <label id="page">1</label>/<label id="pages">1</label>
+            </td>
+            <td colspan="1">
+                <a><img src="~/images/refresh.png" width="24" height="24" onclick="refreshData();" /></a>
+            </td>
+        </tr>
+    </table>
+
+    @*<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>*@
+    <script src="~/js/jquery-3.4.1.js"></script>
+    <script src="~/js/toastr.js"></script>
+    <script src="~/js/site.js" type="text/javascript"></script>
+    <script src="~/js/pace.js"></script>
+</body>
+
+<partial name="_VariablesPartial" />
+<partial name="_ToastrPartial" />
+<partial name="_PagingPartial" />
+
+<script>
+    const uri = "/api/rates";
+    let refreshColl2 = true;
+
+    function getData() {
+        try {
+            myClearPageError();
+            $.ajax({
+                type: "GET",
+                url: getUrlWithPaging(uri, offset, limit, filter),
+                cache: false,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('getData', jqXHR, textStatus, errorThrown);
+                },
+                success: function (data) {
+                    const tBody = $("#collection");
+
+                    if (refreshColl2) {
+                        $("#add-category").empty();
+                        $("#edit-category").empty();
+                        $("#add-category").append($("<option></option>").val("***SELECT***").html("---Select a Category---"));
+                        $.each(data.Categories, function (key, item) {
+                            if (!item.disabled) {
+                                $("#add-category").append($("<option></option>").val(item.id).html(item.name));
+                                $("#edit-category").append($("<option></option>").val(item.id).html(item.name));
+                            }
+                        });
+                        $("#add-class").empty();
+                        $("#edit-class").empty();
+                        $("#add-class").append($("<option></option>").val("***SELECT***").html("---Select a Class---"));
+                        $.each(data.Classes, function (key, item) {
+                            if (!item.disabled) {
+                                $("#add-class").append($("<option></option>").val(item.id).html(item.name));
+                                $("#edit-class").append($("<option></option>").val(item.id).html(item.name));
+                            }
+                        });
+                        refreshColl2 = false;
+                    }
+
+                    count = data.Count;
+                    applyPaging('initial');
+                    $(tBody).empty();
+                    setCount("#counter", count, "Rates");
+
+                    $.each(data.Rates, function (key, item) {
+                        const tr = $("<tr></tr>")
+                            //.append($("<td></td>").text(item.id))
+                            .append($("<td></td>").text(getSelectName(item.categoryId, "#add-category")))
+                            //.append($("<td></td>").text(item.categoryId))
+                            .append($("<td></td>").text(getSelectName(item.classId, "#add-class")))
+                            //.append($("<td></td>").text(item.classId))
+                            //.append($("<td></td>").text(item.name))
+                            .append($("<td></td>").text(item.basePrice))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.disabled
+                                    })
+                                )
+                            )
+                            .append($("<td></td>").text(utcToLocal(item.timestamp)))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Edit</a>").on("click", function () {
+                                        editItem(item.id);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $(item.disabled ? "<a>Enable</a>" : "<a>Disable</a>").on("click", function () {
+                                        toggleItem(item.id, item.disabled);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Delete</a>").on("click", function () {
+                                        deleteItem(item.id, "Rate");    //item.name);
+                                    })
+                                )
+                            );
+                        tr.appendTo(tBody);
+                    });
+                    collection = data.Rates;
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('getData ' + e);
+        }
+    }
+
+    function validItem(item) {
+        try {
+            var error = 0;
+            var msg = '';
+            if (item.categoryId == '') {
+                error = 1;
+                msg = 'Please select a "Category" from first dropdown list.';
+            }
+            if (item.classId == '') {
+                error = 1;
+                msg += ' Please select a "Class" from second dropdown list.';
+            }
+            //if (item.name == '') {
+            //    error = 1;
+            //    msg += ' "Rate" cannot be empty.';
+            //}
+            if (!isInteger(item.basePrice)) {
+                error = 1;
+                msg += ' "Base Price" should be a valid integer amount, rounded off to nearest Rupee. ';
+            }
+            if (error) {
+                myWriteError(msg);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        catch (e) {
+            myWriteError('validItem ' + e);
+        }
+    }
+
+    function addItem() {
+        try {
+            myClearPageError();
+            const item = {
+                categoryId: getSelectId("#add-category"),
+                classId: getSelectId("#add-class"),
+                //name: $("#add-name").val(),
+                basePrice: getSelectId("#add-price"),
+                disabled: false,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            $.ajax({
+                type: "POST",
+                accepts: "application/json",
+                url: uri,
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('addItem', jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    getData();
+                    $("#add-id").val("");
+                    //$("#add-name").val("");
+                    $("#add-price").val("");
+                    myToastr('Create', 'Rate created.', false);    //"' + item.name + '"
+                }
+            });
+            //$("#add-name").focus();
+        }
+        catch (e) {
+            myWriteError('addItem ' + e);
+        }
+    }
+
+    function editItem(id) {
+        try {
+            myClearPageError();
+            $.each(collection, function (key, item) {
+                if (item.id === id) {
+                    $("#edit-id").val(item.id);
+                    $("#edit-category").val(item.categoryId);
+                    $("#edit-class").val(item.classId);
+                    //$("#edit-name").val(item.name);
+                    $("#edit-price").val(item.basePrice);
+                    $("#edit-disabled").val(item.disabled); //[0].checked = item.disabled;
+                }
+            });
+            $("#spoiler").css({ display: "block" });
+        }
+        catch (e) {
+            myWriteError('editItem ' + e);
+        }
+    }
+
+    $(".my-form").on("submit", function () {
+        try {
+            const item = {
+                id: $("#edit-id").val(),
+                categoryId: getSelectId("#edit-category"),
+                classId: getSelectId("#edit-class"),
+                //name: $("#edit-name").val(),
+                basePrice: getSelectId("#edit-price"),
+                disabled: $("#edit-disabled").val(), //is(":checked"),
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            var url = uri + "/" + $("#edit-id").val();
+            $.ajax({
+                url: url,
+                type: "PUT",
+                accepts: "application/json",
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('editItem ' + url, jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    closeInput();
+                    getData();
+                    myToastr('Update', 'Rate updated.', false); //"' + item.name + '" 
+                }
+            });
+            return false;
+        }
+        catch (e) {
+            myWriteError('submit ' + e);
+        }
+    });
+
+    function manageFilter() {
+        try {
+            var catId = getSelectId("#add-category");
+            var clsId = getSelectId("#add-class");
+            offset = 0;
+            filter = "";
+            if (catId != "" && clsId != "")
+                filter = JSON.stringify(
+                    {
+                        "categoryId": catId,
+                        "classId": clsId
+                    }
+                );
+            else
+            if (catId != "")
+                filter = JSON.stringify(
+                    {
+                        "categoryId": catId
+                    }
+                );
+            else if (clsId != "")
+                filter = JSON.stringify(
+                    {
+                        "classId": clsId
+                    }
+                );
+            getData();
+        }
+        catch (e) {
+            myWriteError('manageFilter ' + e);
+        }
+    }
+</script>

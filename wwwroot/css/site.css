@@ -1,0 +1,194 @@
+﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification\ 
+for details on configuring this project to bundle and minify static web assets. */
+body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Wrapping element */
+/* Set some basic padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Carousel */
+.carousel-caption p {
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+/* Make .svg files in the carousel display properly in older browsers */
+.carousel-inner .item img[src$=".svg"] {
+    width: 100%;
+}
+
+/* QR code generator */
+#qrCode {
+    margin: 15px;
+}
+
+/* Hide/rearrange for smaller screens */
+@media screen and (max-width: 767px) {
+    /* Hide captions */
+    .carousel-caption {
+        display: none;
+    }
+}
+
+input[type='submit'], button, [aria-label] {
+    cursor: pointer;
+}
+
+#spoiler {
+    display: none;
+}
+
+table {
+    border: 1px solid;
+    /*border-collapse: collapse;*/
+    /*padding-left: font-family: Verdana, Arial, sans-serif;*/
+}
+
+th {
+    background-color: #5bc0de; /*#0066CC;*/
+    color: white;
+    padding: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+tr .table-footer {
+    background-color: #ffffff;
+    color: white;
+    padding: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+td {
+    /*border: 1px solid;*/
+    padding: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/*tr:nth-child(even) {
+    background-color: Lightgreen;
+}*/
+
+.error-message {
+    color: #cc0033;
+    display: inline-block;
+    font-size: 12px;
+    line-height: 15px;
+    margin: 5px 0 0;
+}
+
+.submit-button-nav {
+    background-color: #5bc0de;
+    /*border: 1px solid #57D6C7;*/
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    color: #ffffff;
+    cursor: pointer;
+    /*font-size: 16px !important;
+    font-weight: bold;
+    text-shadow: 1px 1px #57D6C7;*/
+    /*width: 150px;*/
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+.submit-button-nav-dis {
+    /*background-color: #333333;
+    border: 1px solid #57D6C7;*/
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    color: #ffffff;
+    cursor: none;
+    /*font-size: 16px !important;
+    font-weight: bold;
+    text-shadow: 1px 1px #57D6C7;*/
+    /*width: 150px;*/
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+.submit-button {
+    background-color: #5bc0de; /*#57d6c7;*/
+    border: 1px solid #57D6C7;
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px !important;
+    font-weight: bold;
+    text-shadow: 1px 1px #57D6C7;
+    width: 150px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+a:link, a:visited {
+    display: inline-block;
+    padding: 14px 25px;
+    text-align: center;
+    text-decoration: none;
+}
+
+a:hover, a:active {
+    /*background-color: #5bc0de;*/ /*#57d6c7;*/
+    border-color: #46b8da;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+select {
+    height: 25px;
+}

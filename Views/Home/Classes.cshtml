@@ -1,0 +1,258 @@
+﻿@{
+    ViewData["Title"] = "Manage Classes";
+    ViewData["Message"] = "View, Create, Edit, Disable, Delete Classes";
+}
+
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <environment include="Development,Production">
+        <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+        <link href="~/css/site.css" rel="stylesheet" />
+        <link href="~/css/toastr.css" rel="stylesheet" />
+        <link href="~/css/pace-centersimple.css" rel="stylesheet" />
+    </environment>
+</head>
+<body>
+    <h2>@ViewData["Title"]</h2>
+    <h5>@ViewData["Message"]</h5>
+    <h6><label id="pageError" class="error-message"></label></h6>
+
+    <h3>Create a new Class</h3>
+    <h6>
+        <li><b>Class</b> should be a valid, non-empty string.</li>
+    </h6>
+    <form action="javascript:void(0);" method="POST" onsubmit="return addItem();">
+        <input type="text" id="add-name" placeholder="Class" />
+        <input type="submit" class="submit-button" value="Create" />
+    </form>
+
+    <div id="spoiler">
+        <h3>Edit Class</h3>
+        <form class="my-form">
+            <input type="hidden" id="edit-id" />
+            <input type="text" id="edit-name" />
+            <input type="hidden" id="edit-disabled" />
+            <input type="submit" class="submit-button" value="Update" />
+            <a onclick="closeInput()" aria-label="Close">&#10006;</a>
+        </form>
+    </div>
+
+    <p></p>
+    <h3>
+        <p id="counter"></p>
+    </h3>
+
+    <table border="1" cellpadding="10" cellspacing="10">
+        <tr>
+            @*
+                <th>Id</th>*@
+            <th>Class</th>
+            <th>Disabled</th>
+            <th>Timestamp</th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tbody id="collection"></tbody>
+        <tr class="table-footer">
+            <td colspan="5">
+                <input id="navF" type="submit" class="submit-button-nav" value="<< First" onclick="applyPaging('first');" />
+                <input id="navP" type="submit" class="submit-button-nav" value="< Previous" onclick="applyPaging('prev');" />
+                <input id="navN" type="submit" class="submit-button-nav" value="Next >" onclick="applyPaging('next');" />
+                <input id="navL" type="submit" class="submit-button-nav" value="Last >>" onclick="applyPaging('last');" /> Page <label id="page">1</label>/<label id="pages">1</label>
+            </td>
+            <td colspan="1">
+                <a><img src="~/images/refresh.png" width="24" height="24" onclick="refreshData();" /></a>
+        </tr>
+    </table>
+
+    @*<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>*@
+    <script src="~/js/jquery-3.4.1.js"></script>
+    <script src="~/js/toastr.js"></script>
+    <script src="~/js/site.js" type="text/javascript"></script>
+    <script src="~/js/pace.js"></script>
+</body>
+
+<partial name="_VariablesPartial" />
+<partial name="_ToastrPartial" />
+<partial name="_PagingPartial" />
+
+<script>
+    const uri = "/api/classes";
+
+    function getData() {
+        try {
+            myClearPageError();
+            $.ajax({
+                type: "GET",
+                url: getUrlWithPaging(uri, offset, limit),
+                cache: false,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('getData', jqXHR, textStatus, errorThrown);
+                },
+                success: function (data) {
+                    const tBody = $("#collection");
+
+                    count = data.Count;
+                    applyPaging('initial');
+                    $(tBody).empty();
+                    setCount("#counter", count, "Classes");
+
+                    $.each(data.Classes, function (key, item) {
+                        const tr = $("<tr></tr>")
+                            //.append($("<td></td>").text(item.id))
+                            .append($("<td></td>").text(item.name))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.disabled
+                                    })
+                                )
+                            )
+                            .append($("<td></td>").text(utcToLocal(item.timestamp)))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Edit</a>").on("click", function () {
+                                        editItem(item.id);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $(item.disabled ? "<a>Enable</a>" : "<a>Disable</a>").on("click", function () {
+                                        toggleItem(item.id, item.disabled);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Delete</a>").on("click", function () {
+                                        deleteItem(item.id, item.name);
+                                    })
+                                )
+                            );
+                        tr.appendTo(tBody);
+                    });
+                    collection = data.Classes;
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('getData ' + e);
+        }
+    }
+
+    function validItem(item) {
+        try {
+            var error = 0;
+            var msg = '';
+            if (item.name == '') {
+                error = 1;
+                msg = '"Class" cannot be empty.';
+            }
+            if (error) {
+                myWriteError(msg);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        catch (e) {
+            myWriteError('validItem ' + e);
+        }
+    }
+
+    function addItem() {
+        try {
+            myClearPageError();
+            const item = {
+                name: $("#add-name").val(),
+                disabled: false,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            $.ajax({
+                type: "POST",
+                accepts: "application/json",
+                url: uri,
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('addItem', jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    getData();
+                    $("#add-id").val("");
+                    $("#add-name").val("");
+                    myToastr('Create', 'Item "' + item.name + '" created.', false);
+                }
+            });
+            $("#add-name").focus();
+        }
+        catch (e) {
+            myWriteError('addItem ' + e);
+        }
+    }
+
+    function editItem(id) {
+        try {
+            myClearPageError();
+            $.each(collection, function (key, item) {
+                if (item.id === id) {
+                    $("#edit-id").val(item.id);
+                    $("#edit-name").val(item.name);
+                    $("#edit-disabled").val(item.disabled); //[0].checked = item.disabled;
+                }
+            });
+            $("#spoiler").css({ display: "block" });
+        }
+        catch (e) {
+            myWriteError('editItem ' + e);
+        }
+    }
+
+    $(".my-form").on("submit", function () {
+        try {
+            const item = {
+                id: $("#edit-id").val(),
+                name: $("#edit-name").val(),
+                disabled: $("#edit-disabled").val(), //is(":checked"),
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            var url = uri + "/" + $("#edit-id").val();
+            $.ajax({
+                url: url,
+                type: "PUT",
+                accepts: "application/json",
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('editItem ' + url, jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    closeInput();
+                    getData();
+                    myToastr('Update', 'Item "' + item.name + '" updated.', false);
+                }
+            });
+            return false;
+        }
+        catch (e) {
+            myWriteError('submit ' + e);
+        }
+    });
+</script>

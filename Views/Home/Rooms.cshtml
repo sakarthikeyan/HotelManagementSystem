@@ -1,0 +1,370 @@
+﻿@{
+    ViewData["Title"] = "Manage Rooms";
+    ViewData["Message"] = "View, Create, Edit, Disable, Delete Rooms";
+}
+
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <environment include="Development,Production">
+        <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+        <link href="~/css/site.css" rel="stylesheet" />
+        <link href="~/css/toastr.css" rel="stylesheet" />
+        <link href="~/css/pace-centersimple.css" rel="stylesheet" />
+    </environment>
+</head>
+<body>
+    <h2>@ViewData["Title"]</h2>
+    <h5>@ViewData["Message"]</h5>
+    <h6><label id="pageError" class="error-message"></label></h6>
+
+    <h3>Create a new Room</h3>
+    <h6>
+        <li>Please select a <b>Category</b> from the first dropdown list.</li>
+        <li><b>Room</b> should be a valid, non-empty string.</li>
+        <li><b>Room Code</b> should be a valid, non-empty string.</li>
+    </h6>
+    <form action="javascript:void(0);" method="POST" onsubmit="return addItem();">
+        <select id="add-category" onchange="manageFilter();">
+            <option value=""></option>
+        </select>
+        <input type="text" id="add-name" placeholder="Room" />
+        <input type="text" id="add-code" placeholder="Room Code" />
+        <label><input type="checkbox" id="add-nonAC" placeholder="Non AC" value="0" />Non AC</label>
+        <label><input type="checkbox" id="add-booked" placeholder="Is Booked" value="0" />Is Booked</label>
+        <label><input type="checkbox" id="add-occupied" placeholder="Is Occupied" value="0" />Is Occupied</label>
+        <input type="submit" class="submit-button" value="Create" />
+    </form>
+
+    <div id="spoiler">
+        <h3>Edit Room</h3>
+        <form class="my-form">
+            <input type="hidden" id="edit-id" />
+            <select id="edit-category">
+                <option value="" selected></option>
+            </select>
+            <input type="text" id="edit-name" />
+            <input type="text" id="edit-code" />
+            <label><input type="checkbox" id="edit-nonAC" placeholder="Non AC" value="0" />Non AC</label>
+            <label><input type="checkbox" id="edit-booked" placeholder="Is Booked" value="0" />Is Booked</label>
+            <label><input type="checkbox" id="edit-occupied" placeholder="Is Occupied" value="0" />Is Occupied</label>
+            <input type="hidden" id="edit-disabled" />
+            <input type="submit" class="submit-button" value="Update" />
+            <a onclick="closeInput()" aria-label="Close">&#10006;</a>
+        </form>
+    </div>
+
+    <p></p>
+    <h3>
+        <p id="counter"></p>
+    </h3>
+
+    <table border="1" cellpadding="10" cellspacing="10">
+        <tr>
+            @*
+        <th>Id</th>*@
+            <th>Category</th>
+            @*<th>Category Id</th>*@
+            <th>Room</th>
+            <th>Room Code</th>
+            <th>Non AC</th>
+            <th>Is Booked</th>
+            <th>Is Occupied</th>
+            <th>Disabled</th>
+            <th>Timestamp</th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tbody id="collection"></tbody>
+        <tr class="table-footer">
+            <td colspan="10">
+                <input id="navF" type="submit" class="submit-button-nav" value="<< First" onclick="applyPaging('first');" />
+                <input id="navP" type="submit" class="submit-button-nav" value="< Previous" onclick="applyPaging('prev');" />
+                <input id="navN" type="submit" class="submit-button-nav" value="Next >" onclick="applyPaging('next');" />
+                <input id="navL" type="submit" class="submit-button-nav" value="Last >>" onclick="applyPaging('last');" /> Page <label id="page">1</label>/<label id="pages">1</label>
+            </td>
+            <td colspan="1">
+                <a><img src="~/images/refresh.png" width="24" height="24" onclick="refreshData();" /></a>
+            </td>
+        </tr>
+    </table>
+
+    @*<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>*@
+    <script src="~/js/jquery-3.4.1.js"></script>
+    <script src="~/js/toastr.js"></script>
+    <script src="~/js/site.js" type="text/javascript"></script>
+    <script src="~/js/pace.js"></script>
+</body>
+
+<partial name="_VariablesPartial" />
+<partial name="_ToastrPartial" />
+<partial name="_PagingPartial" />
+
+<script>
+    const uri = "/api/rooms";
+    let refreshColl2 = true;
+
+    function getData() {
+        try {
+            myClearPageError();
+            $.ajax({
+                type: "GET",
+                url: getUrlWithPaging(uri, offset, limit, filter),
+                cache: false,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('getData', jqXHR, textStatus, errorThrown);
+                },
+                success: function (data) {
+                    const tBody = $("#collection");
+
+                    if (refreshColl2) {
+                        $("#add-category").empty();
+                        $("#edit-category").empty();
+                        $("#add-category").append($("<option></option>").val("***SELECT***").html("---Select a Category---"));
+                        $.each(data.Categories, function (key, item) {
+                            if (!item.disabled) {
+                                $("#add-category").append($("<option></option>").val(item.id).html(item.name));
+                                $("#edit-category").append($("<option></option>").val(item.id).html(item.name));
+                            }
+                        });
+                        refreshColl2 = false;
+                    }
+
+                    count = data.Count;
+                    applyPaging('initial');
+                    $(tBody).empty();
+                    setCount("#counter", count, "Rooms");
+
+                    $.each(data.Rooms, function (key, item) {
+                        const tr = $("<tr></tr>")
+                            //.append($("<td></td>").text(item.id))
+                            .append($("<td></td>").text(getSelectName(item.categoryId, "#add-category")))
+                            //.append($("<td></td>").text(item.categoryId))
+                            .append($("<td></td>").text(item.name))
+                            .append($("<td></td>").text(item.code))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.nonAC
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.isBooked
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.isOccupied
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.disabled
+                                    })
+                                )
+                            )
+                            .append($("<td></td>").text(utcToLocal(item.timestamp)))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Edit</a>").on("click", function () {
+                                        editItem(item.id);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $(item.disabled ? "<a>Enable</a>" : "<a>Disable</a>").on("click", function () {
+                                        toggleItem(item.id, item.disabled);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Delete</a>").on("click", function () {
+                                        deleteItem(item.id, item.name);
+                                    })
+                                )
+                            );
+                        tr.appendTo(tBody);
+                    });
+                    collection = data.Rooms;
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('getData ' + e);
+        }
+    }
+
+    function validItem(item) {
+        try {
+            var error = 0;
+            var msg = '';
+            if (item.categoryId == '') {
+                error = 1;
+                msg = 'Please select a "Category" from first dropdown list.';
+            }
+            if (item.name == '') {
+                error = 1;
+                msg += ' "Room" cannot be empty.';
+            }
+            if (item.code == '') {
+                error = 1;
+                msg += ' "Room Code" cannot be empty. ';
+            }
+            if (error) {
+                myWriteError(msg);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        catch (e) {
+            myWriteError('validItem ' + e);
+        }
+    }
+
+    function addItem() {
+        try {
+            myClearPageError();
+            const item = {
+                categoryId: getSelectId("#add-category"),
+                name: $("#add-name").val(),
+                code: getSelectId("#add-code"),
+                nonAC: $("#add-nonAC").prop("checked"),
+                isBooked: $("#add-booked").prop("checked"),
+                isOccupied: $("#add-occupied").prop("checked"),
+                disabled: false,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            $.ajax({
+                type: "POST",
+                accepts: "application/json",
+                url: uri,
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('addItem', jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    getData();
+                    $("#add-id").val("");
+                    $("#add-name").val("");
+                    $("#add-code").val("");
+                    $("#add-nonAC").prop("checked", false);
+                    $("#add-booked").prop("checked", false);
+                    $("#add-occupied").prop("checked", false);
+                    myToastr('Create', 'Item "' + item.name + '" created.', false);
+                }
+            });
+            $("#add-name").focus();
+        }
+        catch (e) {
+            myWriteError('addItem ' + e);
+        }
+    }
+
+    function editItem(id) {
+        try {
+            myClearPageError();
+            $.each(collection, function (key, item) {
+                if (item.id === id) {
+                    $("#edit-id").val(item.id);
+                    $("#edit-category").val(item.categoryId);
+                    $("#edit-name").val(item.name);
+                    $("#edit-code").val(item.code);
+                    $("#edit-nonAC").prop("checked", (item.nonAC ? true : false));
+                    $("#edit-booked").prop("checked", (item.isBooked ? true : false));
+                    $("#edit-occupied").prop("checked", (item.isOccupied ? true : false));
+                    $("#edit-disabled").val(item.disabled); //[0].checked = item.disabled;
+                }
+            });
+            $("#spoiler").css({ display: "block" });
+        }
+        catch (e) {
+            myWriteError('editItem ' + e);
+        }
+    }
+
+    $(".my-form").on("submit", function () {
+        try {
+            const item = {
+                id: $("#edit-id").val(),
+                categoryId: getSelectId("#edit-category"),
+                name: $("#edit-name").val(),
+                code: getSelectId("#edit-code"),
+                nonAC: $("#edit-nonAC").prop("checked"),
+                isBooked: $("#edit-booked").prop("checked"),
+                isOccupied: $("#edit-occupied").prop("checked"),
+                disabled: $("#edit-disabled").val(), //is(":checked"),
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            var url = uri + "/" + $("#edit-id").val();
+            $.ajax({
+                url: url,
+                type: "PUT",
+                accepts: "application/json",
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('editItem ' + url, jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    closeInput();
+                    getData();
+                    myToastr('Update', 'Item "' + item.name + '" updated.', false);
+                }
+            });
+            return false;
+        }
+        catch (e) {
+            myWriteError('submit ' + e);
+        }
+    });
+
+    function manageFilter() {
+        try {
+            var catId = getSelectId("#add-category");
+            offset = 0;
+            filter = "";
+            if (catId != "")
+                filter = JSON.stringify(
+                    {
+                        "categoryId": catId
+                    }
+                );
+            getData();
+        }
+        catch (e) {
+            myWriteError('manageFilter ' + e);
+        }
+    }
+</script>

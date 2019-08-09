@@ -1,0 +1,584 @@
+﻿@{
+    ViewData["Title"] = "Manage Bookings";
+    ViewData["Message"] = "View, Create, Edit, Disable, Delete Bookings";
+}
+
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <environment include="Development,Production">
+        <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+        <link href="~/css/site.css" rel="stylesheet" />
+        <link href="~/css/toastr.css" rel="stylesheet" />
+        <link href="~/css/pace-centersimple.css" rel="stylesheet" />
+    </environment>
+</head>
+<body>
+    <h2>@ViewData["Title"]</h2>
+    <h5>@ViewData["Message"]</h5>
+    <h6><label id="pageError" class="error-message"></label></h6>
+
+    <h3>Search Filter</h3>
+    <h6>
+        <li>Select a <b>Category</b> from the dropdown list to filter Rooms.</li>
+        <li>Check or un-check <b>Non AC</b> or <b>Is Booked</b> or <b>Is Occupied</b> to filter Rooms further.</li>
+        <li>Click <b>Apply Filters</b> link to refresh Rooms list.</li>
+    </h6>
+    <form action="javascript:void(0);" method="POST" onsubmit="return manageFilter();">
+        <select id="add-category" onchange="refreshRooms();">
+            <option value=""></option>
+        </select>
+        @*<input type="text" id="add-name" placeholder="Booking" />
+            <input type="text" id="add-code" placeholder="Booking Code" />*@
+        <label><input type="checkbox" id="add-nonAC" placeholder="Non AC" value="0" onchange="return refreshRooms();" />Non AC</label>
+        <label><input type="checkbox" id="add-booked" placeholder="Is Booked" value="0" onchange="return refreshRooms();" />Is Booked</label>
+        <label><input type="checkbox" id="add-occupied" placeholder="Is Occupied" value="0" onchange="return refreshRooms();" />Is Occupied</label>
+
+        <p></p>
+
+        <input id="apply-filter" type="submit" class="submit-button" value="Apply Filter" />
+    </form>
+
+    <h3>Apply Class</h3>
+    <h6>
+        <li>Select a <b>Class</b> from the dropdown list to see the price.</li>
+    </h6>
+
+    <select id="add-class" onchange="refreshRooms();">
+        @*updPrice();*@
+        <option value="" selected></option>
+    </select>
+
+    <div id="spoiler">
+        <h3>Edit Booking</h3>
+        <form class="my-form">
+            <input type="hidden" id="edit-id" />
+            <select id="edit-category">
+                <option value="" selected></option>
+            </select>
+            <select id="edit-class">
+                <option value="" selected></option>
+            </select>
+            <input type="text" id="edit-name" />
+            <input type="text" id="edit-code" />
+            <label><input type="checkbox" id="edit-nonAC" placeholder="Non AC" value="0" />Non AC</label>
+            <label><input type="checkbox" id="edit-booked" placeholder="Is Booked" value="0" />Is Booked</label>
+            <label><input type="checkbox" id="edit-occupied" placeholder="Is Occupied" value="0" />Is Occupied</label>
+            <input type="hidden" id="edit-disabled" />
+            <input type="submit" class="submit-button" value="Update" />
+            <a onclick="closeInput()" aria-label="Close">&#10006;</a>
+        </form>
+    </div>
+
+    <p></p>
+
+    <h3>
+        <p id="rooms-counter"></p>
+    </h3>
+
+    <table id="roomsTable" class="rooms-table" border="1" cellpadding="10" cellspacing="10">
+        <tr>
+            @*
+                <th>Id</th>*@
+            <th>Category</th>
+            @*<th>Category Id</th>*@
+            <th>Room</th>
+            <th>Room Code</th>
+            <th>Non AC</th>
+            <th>Is Booked</th>
+            <th>Is Occupied</th>
+            <th>Base Price</th>
+            @*
+                <th>Disabled</th>
+                <th>Timestamp</th>*@
+        </tr>
+        <tbody id="rooms-collection"></tbody>
+    </table>
+
+    <p></p>
+    <h3>
+        <p id="counter"></p>
+    </h3>
+
+    <table border="1" cellpadding="10" cellspacing="10">
+        <tr>
+            @*
+                <th>Id</th>*@
+            <th>Category</th>
+            <th>Category Id</th>
+            <th>Booking</th>
+            <th>Booking Code</th>
+            <th>Non AC</th>
+            <th>Is Booked</th>
+            <th>Is Occupied</th>
+            <th>Disabled</th>
+            <th>Timestamp</th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tbody id="collection"></tbody>
+        <tr class="table-footer">
+            <td colspan="10">
+                <input id="navF" type="submit" class="submit-button-nav" value="<< First" onclick="applyPaging('first');" />
+                <input id="navP" type="submit" class="submit-button-nav" value="< Previous" onclick="applyPaging('prev');" />
+                <input id="navN" type="submit" class="submit-button-nav" value="Next >" onclick="applyPaging('next');" />
+                <input id="navL" type="submit" class="submit-button-nav" value="Last >>" onclick="applyPaging('last');" /> Page <label id="page">1</label>/<label id="pages">1</label>
+            </td>
+            <td colspan="1">
+                <a><img src="~/images/refresh.png" width="24" height="24" onclick="refreshData();" /></a>
+            </td>
+        </tr>
+    </table>
+
+    @*<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>*@
+    <script src="~/js/jquery-3.4.1.js"></script>
+    <script src="~/js/toastr.js"></script>
+    <script src="~/js/site.js" type="text/javascript"></script>
+    <script src="~/js/pace.js"></script>
+</body>
+
+<partial name="_VariablesPartial" />
+<partial name="_ToastrPartial" />
+<partial name="_PagingPartial" />
+
+<script>
+    const uri = "/api/bookings";
+    const CatIdCellNo = 1;
+    const PriceCellNo = 6;
+    let refreshColl2 = true;
+    let roomsCount = 0;
+    let ratesCollection = null;
+    let roomsCollection = null;
+
+    function getData() {
+        try {
+            myClearPageError();
+            $.ajax({
+                type: "GET",
+                url: getUrlWithPaging(uri, offset, limit, filter),
+                cache: false,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('getData', jqXHR, textStatus, errorThrown);
+                },
+                success: function (data) {
+                    const tBody = $("#collection");
+
+                    if (refreshColl2) {
+                        $("#add-category").empty();
+                        $("#edit-category").empty();
+                        $("#add-category").append($("<option></option>").val("***SELECT***").html("---Select a Category---"));
+                        $.each(data.Categories, function (key, item) {
+                            if (!item.disabled) {
+                                $("#add-category").append($("<option></option>").val(item.id).html(item.name));
+                                $("#edit-category").append($("<option></option>").val(item.id).html(item.name));
+                            }
+                        });
+                        $("#add-class").empty();
+                        $("#edit-class").empty();
+                        $("#add-class").append($("<option></option>").val("***SELECT***").html("---Select a Class---"));
+                        $.each(data.Classes, function (key, item) {
+                            if (!item.disabled) {
+                                $("#add-class").append($("<option></option>").val(item.id).html(item.name));
+                                $("#edit-class").append($("<option></option>").val(item.id).html(item.name));
+                            }
+                        });
+                        refreshColl2 = false;
+                    }
+
+                    count = data.BookingsCount;
+                    roomsCount = data.RoomsCount;
+                    collection = data.Bookings;
+                    ratesCollection = data.Rates;
+                    roomsCollection = data.Rooms;
+                    applyPaging('initial');
+
+                    refreshRooms();
+
+                    $(tBody).empty();
+                    setCount("#counter", count, "Bookings");
+                    $.each(data.Bookings, function (key, item) {
+                        const tr = $("<tr></tr>")
+                            //.append($("<td></td>").text(item.id))
+                            .append($("<td></td>").text(getSelectName(item.categoryId, "#add-category")))
+                            //.append($("<td></td>").text(item.categoryId))
+                            //.append($("<td></td>").text(item.name))
+                            //.append($("<td></td>").text(item.code))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.nonAC
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.isBooked
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.isOccupied
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<input/>", {
+                                        type: "checkbox",
+                                        disabled: true,
+                                        checked: item.disabled
+                                    })
+                                )
+                            )
+                            .append($("<td></td>").text(utcToLocal(item.timestamp)))
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Edit</a>").on("click", function () {
+                                        editItem(item.id);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $(item.disabled ? "<a>Enable</a>" : "<a>Disable</a>").on("click", function () {
+                                        toggleItem(item.id, item.disabled);
+                                    })
+                                )
+                            )
+                            .append(
+                                $("<td></td>").append(
+                                    $("<a>Delete</a>").on("click", function () {
+                                        //deleteItem(item.id, item.name);
+                                    })
+                                )
+                            );
+                        tr.appendTo(tBody);
+                    });
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('getData ' + e);
+        }
+    }
+
+    function refreshRooms() {
+        try {
+            const tBodyRooms = $("#rooms-collection");
+            var skip = false;
+            var i = 0;
+            var catId = getSelectId("#add-category");
+            var chkNAC = $("#add-nonAC").prop("checked");
+            var chkBk = $("#add-booked").prop("checked");
+            var chkOc = $("#add-occupied").prop("checked");
+            var chkAF = ($("#apply-filter").val() == "Remove Filter");
+
+            $(tBodyRooms).empty();
+            $.each(roomsCollection, function (key, item) {
+                skip = false;
+                if (chkAF) {
+                    skip = (catId != "" && catId != item.categoryId);
+                    if (!skip)
+                        skip = (chkNAC && !item.nonAC);
+                    if (!skip)
+                        skip = (chkBk && !item.isBooked);
+                    if (!skip)
+                        skip = (chkOc && !item.isOccupied);
+                }
+                if (!skip) {
+                    i++;
+                    const tr = $("<tr></tr>")
+                        //.append($("<td></td>").text(item.id))
+                        .append($("<td></td>").text(getSelectName(item.categoryId, "#add-category")))
+                        //.append($("<td name='catId'></td>").text(item.categoryId))
+                        .append($("<td></td>").text(item.name))
+                        .append($("<td></td>").text(item.code))
+                        .append(
+                            $("<td></td>").append(
+                                $("<input/>", {
+                                    type: "checkbox",
+                                    disabled: true,
+                                    checked: item.nonAC
+                                })
+                            )
+                        )
+                        .append(
+                            $("<td></td>").append(
+                                $("<input/>", {
+                                    type: "checkbox",
+                                    disabled: true,
+                                    checked: item.isBooked
+                                })
+                            )
+                        )
+                        .append(
+                            $("<td></td>").append(
+                                $("<input/>", {
+                                    type: "checkbox",
+                                    disabled: true,
+                                    checked: item.isOccupied
+                                })
+                            )
+                        )
+                        .append($("<td name='price'></td>").text(getPrice(item.categoryId, getSelectId("#add-class"))));
+                    tr.appendTo(tBodyRooms);
+                }
+            });
+            setItemsText("#rooms-counter", i, "Rooms");
+            //updPrice();
+        }
+        catch (e) {
+            myWriteError('refreshRooms ' + e);
+        }
+    }
+
+    function validItem(item) {
+        try {
+            var error = 0;
+            var msg = '';
+            if (item.categoryId == '') {
+                error = 1;
+                msg = 'Please select a "Category" from first dropdown list.';
+            }
+            if (item.classId == '') {
+                error = 1;
+                msg += 'Please select a "Class" from first dropdown list.';
+            }
+            if (item.rateId == '') {
+                error = 1;
+                msg += 'Please select a "Rate" from first dropdown list.';
+            }
+            //if (item.name == '') {
+            //    error = 1;
+            //    msg += ' "Booking" cannot be empty.';
+            //}
+            //if (item.code == '') {
+            //    error = 1;
+            //    msg += ' "Booking Code" cannot be empty. ';
+            //}
+            if (error) {
+                myWriteError(msg);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        catch (e) {
+            myWriteError('validItem ' + e);
+        }
+    }
+
+    function addItem() {
+        try {
+            myClearPageError();
+            const item = {
+                categoryId: getSelectId("#add-category"),
+                name: $("#add-name").val(),
+                code: getSelectId("#add-code"),
+                nonAC: $("#add-nonAC").prop("checked"),
+                isBooked: $("#add-booked").prop("checked"),
+                isOccupied: $("#add-occupied").prop("checked"),
+                disabled: false,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            $.ajax({
+                type: "POST",
+                accepts: "application/json",
+                url: uri,
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('addItem', jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    getData();
+                    $("#add-id").val("");
+                    $("#add-name").val("");
+                    $("#add-code").val("");
+                    $("#add-nonAC").prop("checked", false);
+                    $("#add-booked").prop("checked", false);
+                    $("#add-occupied").prop("checked", false);
+                    myToastr('Create', 'Item "' + item.name + '" created.', false);
+                }
+            });
+            $("#add-name").focus();
+        }
+        catch (e) {
+            myWriteError('addItem ' + e);
+        }
+    }
+
+    function editItem(id) {
+        try {
+            myClearPageError();
+            $.each(collection, function (key, item) {
+                if (item.id === id) {
+                    $("#edit-id").val(item.id);
+                    $("#edit-name").val(item.name);
+                    $("#edit-code").val(item.code);
+                    $("#edit-nonAC").prop("checked", (item.nonAC ? true : false));
+                    $("#edit-booked").prop("checked", (item.isBooked ? true : false));
+                    $("#edit-occupied").prop("checked", (item.isOccupied ? true : false));
+                    $("#edit-disabled").val(item.disabled); //[0].checked = item.disabled;
+                }
+            });
+            $("#spoiler").css({ display: "block" });
+        }
+        catch (e) {
+            myWriteError('editItem ' + e);
+        }
+    }
+
+    $(".my-form").on("submit", function () {
+        try {
+            const item = {
+                id: $("#edit-id").val(),
+                categoryId: getSelectId("#edit-category"),
+                name: $("#edit-name").val(),
+                code: getSelectId("#edit-code"),
+                nonAC: $("#edit-nonAC").prop("checked"),
+                isBooked: $("#edit-booked").prop("checked"),
+                isOccupied: $("#edit-occupied").prop("checked"),
+                disabled: $("#edit-disabled").val(), //is(":checked"),
+                timestamp: new Date().toISOString()
+            };
+
+            if (!validItem(item)) {
+                return false;
+            }
+
+            var url = uri + "/" + $("#edit-id").val();
+            $.ajax({
+                url: url,
+                type: "PUT",
+                accepts: "application/json",
+                contentType: "application/json",
+                data: JSON.stringify(item),
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('editItem ' + url, jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    closeInput();
+                    getData();
+                    myToastr('Update', 'Item "' + item.name + '" updated.', false);
+                }
+            });
+            return false;
+        }
+        catch (e) {
+            myWriteError('submit ' + e);
+        }
+    });
+
+    function manageFilter() {
+        try {
+            //var catId = getSelectId("#add-category");
+            //var clsId = getSelectId("#add-class");
+            //offset = 0;
+            //filter = "";
+            //if (catId != "" && clsId != "")
+            //    filter = JSON.stringify(
+            //        {
+            //            "categoryId": catId,
+            //            "classId": clsId
+            //        }
+            //    );
+            //else
+            //if (catId != "")
+            //    filter = JSON.stringify(
+            //        {
+            //            "categoryId": catId,
+            //            "nonAC": $("#add-nonAC").prop("checked"),
+            //            "isBooked": $("#add-booked").prop("checked"),
+            //            "isOccupied": $("#add-occupied").prop("checked")
+            //        }
+            //    );
+            //else
+            //    filter = JSON.stringify(
+            //        {
+            //            "nonAC": $("#add-nonAC").prop("checked"),
+            //            "isBooked": $("#add-booked").prop("checked"),
+            //            "isOccupied": $("#add-occupied").prop("checked")
+            //        }
+            //    );
+            //else if (clsId != "")
+            //    filter = JSON.stringify(
+            //        {
+            //            "classId": clsId
+            //        }
+            //    );
+            //getData();
+
+            if ($("#apply-filter").val() == "Apply Filter") {
+                $("#apply-filter").val("Remove Filter");
+            } else {
+                $("#apply-filter").val("Apply Filter");
+            }
+
+            refreshRooms();
+        }
+        catch (e) {
+            myWriteError('manageFilter ' + e);
+        }
+        return false;
+    }
+
+    function getPrice(catId, clsId) {
+        let price = "";
+        try {
+            if (catId != "" && clsId != "") {
+                $.each(ratesCollection, function (key, item) {
+                    if (!item.disabled && item.categoryId == catId && item.classId == clsId) {  //!found &&
+                        price = item.basePrice;
+                    }
+                });
+            }
+        }
+        catch (e) {
+            myWriteError('getPrice ' + e);
+        }
+        return price;
+    }
+
+    /*
+    function updPrice() {
+        try {
+            var table = document.getElementById('roomsTable');
+            for (var r = 1, n = table.rows.length; r < n; r++) {
+                table.rows[r].cells[PriceCellNo].innerHTML = getPrice(
+                    table.rows[r].cells[CatIdCellNo].innerHTML, getSelectId("#add-class"));
+            }
+        }
+        catch (e) {
+            myWriteError('updPrice ' + e);
+        }
+    }
+    */
+/*
+function GetCellValues() {
+    var table = document.getElementById('roomsTable');
+    for (var r = 0, n = table.rows.length; r < n; r++) {
+        for (var c = 0, m = table.rows[r].cells.length; c < m; c++) {
+            alert(table.rows[r].cells[c].innerHTML);
+        }
+    }
+}
+*/
+</script>

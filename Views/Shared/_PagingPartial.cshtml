@@ -1,0 +1,176 @@
+﻿<script>
+    function applyPaging(t) {
+        try {
+            enableDisableNav(true);
+            var load = true;
+            var s = t;
+            if (!isInteger(limit) || limit <= 0 || count <= 0) {
+                return;
+            }
+            pages = Math.ceil(count / limit);
+            switch (s.toUpperCase()) {
+                case "FIRST":
+                    offset = 0;
+                    break;
+                case "PREV":
+                    offset = parseInt(offset) - parseInt(limit);
+                    if (parseInt(offset) < 0)
+                        offset = 0;
+                    break;
+                case "NEXT":
+                    offset = parseInt(offset) + parseInt(limit);
+                    if (parseInt(offset) > parseInt(count))
+                        offset = parseInt(count) - (parseInt(count) % parseInt(limit));
+                    break;
+                case "LAST":
+                    offset = parseInt(count) - (parseInt(count) % parseInt(limit));
+                    if (offset == count)
+                        offset = parseInt(offset) - parseInt(limit);
+                    break;
+                default:
+                    load = false;
+                    break;
+            }
+            page = Math.ceil(parseInt(offset) / parseInt(limit)) + 1;
+            if (page <= 0)
+                page = 1;
+            else if (page > pages)
+                page = pages;
+            handleNav(pages, page);
+            $("#pages").text(pages);
+            $("#page").text(page);
+            if (load) {
+                getData();
+            }
+        }
+        catch (e) {
+            myWriteError('applyPaging ' + e);
+        }
+    }
+
+    function closeInput() {
+        try {
+            myClearPageError();
+            $("#spoiler").css({ display: "none" });
+        }
+        catch (e) {
+            myWriteError('closeInput ' + e);
+        }
+    }
+
+    function deleteItem(id, name) {
+        try {
+            myClearPageError();
+
+            if (!confirm('Are you sure to delete item "' + name + '"?')) {
+                return false;
+            }
+
+            closeInput();
+
+            $.ajax({
+                url: uri + "/" + id,
+                type: "DELETE",
+                error: function (jqXHR, textStatus, errorThrown) {
+                    myWriteAjaxError('deleteItem', jqXHR, textStatus, errorThrown);
+                },
+                success: function (result) {
+                    getData();
+                    myToastr('Delete item', '"' + name + '" deleted.', false);
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('deleteItem ' + e);
+        }
+    }
+
+    function toggleItem(id, status) {
+        try {
+            myClearPageError();
+            $.each(collection, function (key, item) {
+                if (item.id === id) {
+                    item.disabled = status ? false : true;
+                    item.timestamp = new Date().toISOString();
+
+                    $.ajax({
+                        url: uri + "/" + id,
+                        type: "PUT",
+                        accepts: "application/json",
+                        contentType: "application/json",
+                        data: JSON.stringify(item),
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            myWriteAjaxError('disableItem', jqXHR, textStatus, errorThrown);
+                        },
+                        success: function (result) {
+                            getData();
+                            myToastr('Status', 'Item "' + item.name + '" ' + (item.disabled ? 'disabled' : 'enabled') + '.', false);
+                        }
+                    });
+                    return false;
+                }
+            });
+        }
+        catch (e) {
+            myWriteError('toggleItem ' + e);
+        }
+    }
+
+    function refreshData() {
+        try {
+            offset = 0;
+            getData();
+        }
+        catch (e) {
+            myWriteError('refreshData ' + e);
+        }
+    }
+
+    function setCount(ctl, i, t) {
+        try {
+            if (i > 0) {
+                c = i;
+                let it = (parseInt(offset) + 1) + "-" + Math.min((parseInt(offset) +
+                    parseInt(limit)), c) + "/" + parseInt(c);
+                $(ctl).text(t + " (" + it + " items)");
+            } else {
+                $(ctl).text("No " + t);
+            }
+        }
+        catch (e) {
+            myWriteError('setCount ' + e);
+        }
+    }
+
+    function setItemsText(ctl, i, t) {
+        try {
+            if (i > 0) {
+                $(ctl).text(t + " (" + i + " items)");
+            } else {
+                $(ctl).text("No " + t);
+            }
+        }
+        catch (e) {
+            myWriteError('setCount ' + e);
+        }
+    }
+
+    function showErrLabel(lblName, msg) {
+        if (lblName) {
+            $(lblName).html(msg);
+            $(lblName).parent().show();
+        }
+    }
+
+    function myClearPageError() {
+        clearPageError('#pageError');
+    }
+
+    function myWriteError(msg) {
+        writeError('#pageError', msg);
+    }
+
+    function myWriteAjaxError(msg, jqXHR, textStatus, errorThrown) {
+        writeAjaxError('#pageError', msg, jqXHR, textStatus, errorThrown);
+    }
+</script>
